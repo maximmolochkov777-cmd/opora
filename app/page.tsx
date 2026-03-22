@@ -7,12 +7,58 @@ type UserState = {
   id: string;
 } | null;
 
+type MoodKey =
+  | "anxiety"
+  | "low_energy"
+  | "self_criticism"
+  | "mental_overload"
+  | "emptiness"
+  | "hard_situation"
+  | "talk_out"
+  | "urgent";
+
+const moodContent: Record<MoodKey, { title: string; text: string }> = {
+  anxiety: {
+    title: "Тревожно",
+    text: "Похоже, тебе сейчас тревожно. Не нужно решать всю жизнь сразу. Давай сначала просто немного снизим напряжение и вернуть ощущение опоры.",
+  },
+  low_energy: {
+    title: "Нет сил",
+    text: "Сейчас тебе может не хватать ресурса. Это не обязательно лень. Иногда организму и психике просто нужен более мягкий режим и один маленький шаг вместо большого давления.",
+  },
+  self_criticism: {
+    title: "Самокритика",
+    text: "Похоже, ты сейчас очень жестко к себе относишься. Это не помогает тебе собраться. Давай попробуем перейти от давления к более честному и спокойному взгляду на себя.",
+  },
+  mental_overload: {
+    title: "Хаос в голове",
+    text: "Когда мыслей слишком много, сложно опереться на себя. Сейчас не нужно разобрать всё сразу. Нужно выбрать одну главную точку и снизить перегруз.",
+  },
+  emptiness: {
+    title: "Пусто внутри",
+    text: "Иногда внутри становится пусто, и человек теряет контакт с собой. В такой момент важно не требовать от себя мгновенной мотивации, а бережно вернуть ощущение жизни шаг за шагом.",
+  },
+  hard_situation: {
+    title: "Тяжелая ситуация",
+    text: "Сейчас у тебя, похоже, непростой период. Тебе не нужно тащить всё одному и решать всё за один день. Давай сосредоточимся на том, что поможет тебе удержаться и не развалиться еще сильнее.",
+  },
+  talk_out: {
+    title: "Хочу выговориться",
+    text: "Иногда больше всего нужно просто выговориться без страха, что тебя осудят. Это нормально. Следующим шагом мы можем сделать экран, где ты сможешь написать, что у тебя происходит.",
+  },
+  urgent: {
+    title: "Мне плохо прямо сейчас",
+    text: "Сейчас не нужно решать все сразу. Сначала нужно немного стабилизировать состояние: медленный вдох, выдох, вода, опора под ногами и один понятный следующий шаг.",
+  },
+};
+
 export default function HomePage() {
   const [user, setUser] = useState<UserState>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("Войди в приложение");
   const [loading, setLoading] = useState(true);
+  const [selectedMood, setSelectedMood] = useState<MoodKey | null>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -71,6 +117,7 @@ export default function HomePage() {
   async function signOut() {
     await supabase.auth.signOut();
     setMessage("Выход выполнен");
+    setSelectedMood(null);
   }
 
   if (loading) {
@@ -83,20 +130,66 @@ export default function HomePage() {
   }
 
   if (user) {
+    if (selectedMood) {
+      const mood = moodContent[selectedMood];
+
+      return (
+        <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 560 }}>
+          <h1>Опора</h1>
+          <h2 style={{ marginTop: 24 }}>{mood.title}</h2>
+          <p style={{ fontSize: 20, lineHeight: 1.5, marginTop: 16 }}>{mood.text}</p>
+
+          <button
+            onClick={() => setSelectedMood(null)}
+            style={{ ...buttonStyle, marginTop: 24 }}
+          >
+            Назад
+          </button>
+
+          <button
+            onClick={signOut}
+            style={{
+              ...buttonStyle,
+              marginTop: 12,
+              background: "#f1f1f1",
+            }}
+          >
+            Выйти
+          </button>
+        </main>
+      );
+    }
+
     return (
       <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 520 }}>
         <h1>Опора</h1>
         <p>{message}</p>
 
         <div style={{ marginTop: 24, display: "grid", gap: 12 }}>
-          <button style={buttonStyle}>Тревожно</button>
-          <button style={buttonStyle}>Нет сил</button>
-          <button style={buttonStyle}>Самокритика</button>
-          <button style={buttonStyle}>Хаос в голове</button>
-          <button style={buttonStyle}>Пусто внутри</button>
-          <button style={buttonStyle}>Тяжелая ситуация</button>
-          <button style={buttonStyle}>Хочу выговориться</button>
-          <button style={buttonStyle}>Мне плохо прямо сейчас</button>
+          <button style={buttonStyle} onClick={() => setSelectedMood("anxiety")}>
+            Тревожно
+          </button>
+          <button style={buttonStyle} onClick={() => setSelectedMood("low_energy")}>
+            Нет сил
+          </button>
+          <button style={buttonStyle} onClick={() => setSelectedMood("self_criticism")}>
+            Самокритика
+          </button>
+          <button style={buttonStyle} onClick={() => setSelectedMood("mental_overload")}>
+            Хаос в голове
+          </button>
+          <button style={buttonStyle} onClick={() => setSelectedMood("emptiness")}>
+            Пусто внутри
+          </button>
+          <button style={buttonStyle} onClick={() => setSelectedMood("hard_situation")}>
+            Тяжелая ситуация
+          </button>
+          <button style={buttonStyle} onClick={() => setSelectedMood("talk_out")}>
+            Хочу выговориться
+          </button>
+          <button style={buttonStyle} onClick={() => setSelectedMood("urgent")}>
+            Мне плохо прямо сейчас
+          </button>
         </div>
 
         <button
@@ -104,7 +197,7 @@ export default function HomePage() {
           style={{
             ...buttonStyle,
             marginTop: 20,
-            background: "#f1f1f1"
+            background: "#f1f1f1",
           }}
         >
           Выйти
