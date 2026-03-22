@@ -17,7 +17,7 @@ type MoodKey =
   | "talk_out"
   | "urgent";
 
-type ScreenMode = "home" | "mood" | "talk" | "journal";
+type ScreenMode = "home" | "mood" | "talk" | "journal" | "chat";
 
 type JournalEntry = {
   id: string;
@@ -25,6 +25,11 @@ type JournalEntry = {
   happened: string | null;
   next_step: string | null;
   created_at: string;
+};
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
 };
 
 const moodContent: Record<Exclude<MoodKey, "talk_out">, { title: string; text: string }> = {
@@ -84,6 +89,32 @@ function getSupportReply(text: string) {
   return "Спасибо, что написал. Я тебя услышал. То, что с тобой происходит, имеет значение. Сейчас не нужно быть идеальным — достаточно честно назвать, что тебе тяжело.";
 }
 
+function getChatReply(text: string) {
+  const value = text.trim().toLowerCase();
+
+  if (!value) {
+    return "Можешь написать коротко и как есть. Я рядом.";
+  }
+
+  if (value.includes("трев") || value.includes("паник") || value.includes("страх")) {
+    return "Похоже, тебе сейчас тревожно. Давай не будем решать всё сразу. Что тревожит сильнее всего именно сейчас?";
+  }
+
+  if (value.includes("устал") || value.includes("нет сил") || value.includes("выгор")) {
+    return "Слышу, что у тебя мало сил. Сейчас важнее не ругать себя, а понять, где уходит ресурс. Что сильнее всего тебя истощает?";
+  }
+
+  if (value.includes("работ") || value.includes("деньг")) {
+    return "Тема работы и денег сильно давит на психику. Давай разделим: что срочно, а что пока просто висит фоном и давит?";
+  }
+
+  if (value.includes("один") || value.includes("одиноч")) {
+    return "Одиночество переживается очень тяжело. Спасибо, что написал об этом. Что тебе сейчас нужнее: чтобы тебя выслушали или чтобы помогли разложить всё по шагам?";
+  }
+
+  return "Я тебя услышал. Давай спокойно разберем это вместе. Что в этой ситуации для тебя самое тяжелое?";
+}
+
 export default function HomePage() {
   const [user, setUser] = useState<UserState>(null);
   const [email, setEmail] = useState("");
@@ -103,6 +134,14 @@ export default function HomePage() {
   const [journalMessage, setJournalMessage] = useState("");
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [journalLoading, setJournalLoading] = useState(false);
+
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content: "Привет. Можешь написать всё как есть. Я рядом.",
+    },
+  ]);
 
   useEffect(() => {
     async function loadUser() {
@@ -190,6 +229,13 @@ export default function HomePage() {
     setNextStep("");
     setJournalMessage("");
     setJournalEntries([]);
+    setChatInput("");
+    setChatMessages([
+      {
+        role: "assistant",
+        content: "Привет. Можешь написать всё как есть. Я рядом.",
+      },
+    ]);
   }
 
   function openMood(mood: Exclude<MoodKey, "talk_out">) {
@@ -209,8 +255,29 @@ export default function HomePage() {
     await loadJournalEntries();
   }
 
+  function openChat() {
+    setScreenMode("chat");
+  }
+
   function handleTalkSubmit() {
     setTalkReply(getSupportReply(talkText));
+  }
+
+  function sendChatMessage() {
+    if (!chatInput.trim()) return;
+
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: chatInput,
+    };
+
+    const assistantMessage: ChatMessage = {
+      role: "assistant",
+      content: getChatReply(chatInput),
+    };
+
+    setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setChatInput("");
   }
 
   async function saveJournal() {
@@ -253,6 +320,57 @@ export default function HomePage() {
   }
 
   if (user) {
+    if (screenMode === "chat") {
+      return (
+        <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 760 }}>
+          <h1>Опора</h1>
+          <h2 style={{ marginTop: 24 }}>AI-чат</h2>
+          <p style={{ fontSize: 20, lineHeight: 1.5, marginTop: 16 }}>
+            Можешь писать свободно. Я помогу разобрать состояние по шагам.
+          </p>
+
+          <div style={{ display: "grid", gap: 12, marginTop: 24 }}>
+            {chatMessages.map((msg, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: 16,
+                  borderRadius: 16,
+                  background: msg.role === "assistant" ? "#f3f3f3" : "#e7eefc",
+                  fontSize: 20,
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong>{msg.role === "assistant" ? "Опора" : "Ты"}:</strong> {msg.content}
+              </div>
+            ))}
+          </div>
+
+          <textarea
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="Напиши, что у тебя происходит..."
+            style={{ ...textareaStyle, marginTop: 20 }}
+          />
+
+          <button onClick={sendChatMessage} style={{ ...buttonStyle, marginTop: 16 }}>
+            Отправить
+          </button>
+
+          <button onClick={() => setScreenMode("home")} style={{ ...buttonStyle, marginTop: 20 }}>
+            Назад
+          </button>
+
+          <button
+            onClick={signOut}
+            style={{ ...buttonStyle, marginTop: 12, background: "#f1f1f1" }}
+          >
+            Выйти
+          </button>
+        </main>
+      );
+    }
+
     if (screenMode === "talk") {
       return (
         <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 700 }}>
@@ -456,6 +574,9 @@ export default function HomePage() {
           </button>
           <button style={buttonStyle} onClick={openJournal}>
             Дневник
+          </button>
+          <button style={buttonStyle} onClick={openChat}>
+            AI-чат
           </button>
         </div>
 
