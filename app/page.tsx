@@ -17,6 +17,8 @@ type MoodKey =
   | "talk_out"
   | "urgent";
 
+type ScreenMode = "home" | "mood" | "talk" | "journal";
+
 const moodContent: Record<Exclude<MoodKey, "talk_out">, { title: string; text: string }> = {
   anxiety: {
     title: "Тревожно",
@@ -80,9 +82,17 @@ export default function HomePage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("Войди в приложение");
   const [loading, setLoading] = useState(true);
-  const [selectedMood, setSelectedMood] = useState<MoodKey | null>(null);
+
+  const [screenMode, setScreenMode] = useState<ScreenMode>("home");
+  const [selectedMood, setSelectedMood] = useState<Exclude<MoodKey, "talk_out"> | null>(null);
+
   const [talkText, setTalkText] = useState("");
   const [talkReply, setTalkReply] = useState("");
+
+  const [feeling, setFeeling] = useState("");
+  const [happened, setHappened] = useState("");
+  const [nextStep, setNextStep] = useState("");
+  const [journalMessage, setJournalMessage] = useState("");
 
   useEffect(() => {
     async function loadUser() {
@@ -109,6 +119,7 @@ export default function HomePage() {
       } else {
         setUser(null);
         setMessage("Войди в приложение");
+        setScreenMode("home");
         setSelectedMood(null);
       }
     });
@@ -142,19 +153,46 @@ export default function HomePage() {
   async function signOut() {
     await supabase.auth.signOut();
     setMessage("Выход выполнен");
+    setScreenMode("home");
     setSelectedMood(null);
     setTalkText("");
     setTalkReply("");
+    setFeeling("");
+    setHappened("");
+    setNextStep("");
+    setJournalMessage("");
   }
 
-  function openMood(mood: MoodKey) {
+  function openMood(mood: Exclude<MoodKey, "talk_out">) {
     setSelectedMood(mood);
+    setScreenMode("mood");
+  }
+
+  function openTalkOut() {
     setTalkText("");
     setTalkReply("");
+    setScreenMode("talk");
+  }
+
+  function openJournal() {
+    setJournalMessage("");
+    setScreenMode("journal");
   }
 
   function handleTalkSubmit() {
     setTalkReply(getSupportReply(talkText));
+  }
+
+  function saveJournal() {
+    if (!feeling.trim() && !happened.trim() && !nextStep.trim()) {
+      setJournalMessage("Заполни хотя бы одно поле.");
+      return;
+    }
+
+    setJournalMessage("Запись сохранена.");
+    setFeeling("");
+    setHappened("");
+    setNextStep("");
   }
 
   if (loading) {
@@ -167,7 +205,7 @@ export default function HomePage() {
   }
 
   if (user) {
-    if (selectedMood === "talk_out") {
+    if (screenMode === "talk") {
       return (
         <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 700 }}>
           <h1>Опора</h1>
@@ -192,10 +230,7 @@ export default function HomePage() {
             }}
           />
 
-          <button
-            onClick={handleTalkSubmit}
-            style={{ ...buttonStyle, marginTop: 16 }}
-          >
+          <button onClick={handleTalkSubmit} style={{ ...buttonStyle, marginTop: 16 }}>
             Отправить
           </button>
 
@@ -214,20 +249,13 @@ export default function HomePage() {
             </div>
           ) : null}
 
-          <button
-            onClick={() => setSelectedMood(null)}
-            style={{ ...buttonStyle, marginTop: 20 }}
-          >
+          <button onClick={() => setScreenMode("home")} style={{ ...buttonStyle, marginTop: 20 }}>
             Назад
           </button>
 
           <button
             onClick={signOut}
-            style={{
-              ...buttonStyle,
-              marginTop: 12,
-              background: "#f1f1f1",
-            }}
+            style={{ ...buttonStyle, marginTop: 12, background: "#f1f1f1" }}
           >
             Выйти
           </button>
@@ -235,8 +263,62 @@ export default function HomePage() {
       );
     }
 
-    if (selectedMood) {
-      const mood = moodContent[selectedMood as Exclude<MoodKey, "talk_out">];
+    if (screenMode === "journal") {
+      return (
+        <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 720 }}>
+          <h1>Опора</h1>
+          <h2 style={{ marginTop: 24 }}>Дневник состояния</h2>
+          <p style={{ fontSize: 20, lineHeight: 1.5, marginTop: 16 }}>
+            Здесь можно коротко зафиксировать, что с тобой происходит.
+          </p>
+
+          <div style={{ display: "grid", gap: 16, marginTop: 24 }}>
+            <textarea
+              value={feeling}
+              onChange={(e) => setFeeling(e.target.value)}
+              placeholder="Что я чувствую?"
+              style={textareaStyle}
+            />
+
+            <textarea
+              value={happened}
+              onChange={(e) => setHappened(e.target.value)}
+              placeholder="Что произошло?"
+              style={textareaStyle}
+            />
+
+            <textarea
+              value={nextStep}
+              onChange={(e) => setNextStep(e.target.value)}
+              placeholder="Что я сделаю дальше?"
+              style={textareaStyle}
+            />
+          </div>
+
+          <button onClick={saveJournal} style={{ ...buttonStyle, marginTop: 20 }}>
+            Сохранить
+          </button>
+
+          {journalMessage ? (
+            <p style={{ marginTop: 16, fontSize: 22 }}>{journalMessage}</p>
+          ) : null}
+
+          <button onClick={() => setScreenMode("home")} style={{ ...buttonStyle, marginTop: 20 }}>
+            Назад
+          </button>
+
+          <button
+            onClick={signOut}
+            style={{ ...buttonStyle, marginTop: 12, background: "#f1f1f1" }}
+          >
+            Выйти
+          </button>
+        </main>
+      );
+    }
+
+    if (screenMode === "mood" && selectedMood) {
+      const mood = moodContent[selectedMood];
 
       return (
         <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 560 }}>
@@ -244,20 +326,13 @@ export default function HomePage() {
           <h2 style={{ marginTop: 24 }}>{mood.title}</h2>
           <p style={{ fontSize: 20, lineHeight: 1.5, marginTop: 16 }}>{mood.text}</p>
 
-          <button
-            onClick={() => setSelectedMood(null)}
-            style={{ ...buttonStyle, marginTop: 24 }}
-          >
+          <button onClick={() => setScreenMode("home")} style={{ ...buttonStyle, marginTop: 24 }}>
             Назад
           </button>
 
           <button
             onClick={signOut}
-            style={{
-              ...buttonStyle,
-              marginTop: 12,
-              background: "#f1f1f1",
-            }}
+            style={{ ...buttonStyle, marginTop: 12, background: "#f1f1f1" }}
           >
             Выйти
           </button>
@@ -289,21 +364,20 @@ export default function HomePage() {
           <button style={buttonStyle} onClick={() => openMood("hard_situation")}>
             Тяжелая ситуация
           </button>
-          <button style={buttonStyle} onClick={() => openMood("talk_out")}>
+          <button style={buttonStyle} onClick={openTalkOut}>
             Хочу выговориться
           </button>
           <button style={buttonStyle} onClick={() => openMood("urgent")}>
             Мне плохо прямо сейчас
           </button>
+          <button style={buttonStyle} onClick={openJournal}>
+            Дневник
+          </button>
         </div>
 
         <button
           onClick={signOut}
-          style={{
-            ...buttonStyle,
-            marginTop: 20,
-            background: "#f1f1f1",
-          }}
+          style={{ ...buttonStyle, marginTop: 20, background: "#f1f1f1" }}
         >
           Выйти
         </button>
@@ -350,6 +424,16 @@ const inputStyle: React.CSSProperties = {
   fontSize: 16,
   borderRadius: 12,
   border: "1px solid #ccc",
+};
+
+const textareaStyle: React.CSSProperties = {
+  width: "100%",
+  minHeight: 120,
+  padding: 16,
+  fontSize: 18,
+  borderRadius: 12,
+  border: "1px solid #ccc",
+  resize: "vertical",
 };
 
 const buttonStyle: React.CSSProperties = {
