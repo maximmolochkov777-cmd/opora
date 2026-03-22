@@ -19,6 +19,14 @@ type MoodKey =
 
 type ScreenMode = "home" | "mood" | "talk" | "journal";
 
+type JournalEntry = {
+  id: string;
+  feeling: string | null;
+  happened: string | null;
+  next_step: string | null;
+  created_at: string;
+};
+
 const moodContent: Record<Exclude<MoodKey, "talk_out">, { title: string; text: string }> = {
   anxiety: {
     title: "Тревожно",
@@ -93,6 +101,8 @@ export default function HomePage() {
   const [happened, setHappened] = useState("");
   const [nextStep, setNextStep] = useState("");
   const [journalMessage, setJournalMessage] = useState("");
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [journalLoading, setJournalLoading] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -126,6 +136,24 @@ export default function HomePage() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  async function loadJournalEntries() {
+    if (!user?.id) return;
+
+    setJournalLoading(true);
+
+    const { data, error } = await supabase
+      .from("journal_entries")
+      .select("id, feeling, happened, next_step, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setJournalEntries(data);
+    }
+
+    setJournalLoading(false);
+  }
 
   async function signIn() {
     const { error } = await supabase.auth.signInWithPassword({
@@ -161,6 +189,7 @@ export default function HomePage() {
     setHappened("");
     setNextStep("");
     setJournalMessage("");
+    setJournalEntries([]);
   }
 
   function openMood(mood: Exclude<MoodKey, "talk_out">) {
@@ -174,9 +203,10 @@ export default function HomePage() {
     setScreenMode("talk");
   }
 
-  function openJournal() {
+  async function openJournal() {
     setJournalMessage("");
     setScreenMode("journal");
+    await loadJournalEntries();
   }
 
   function handleTalkSubmit() {
@@ -210,6 +240,7 @@ export default function HomePage() {
     setFeeling("");
     setHappened("");
     setNextStep("");
+    await loadJournalEntries();
   }
 
   if (loading) {
@@ -319,6 +350,42 @@ export default function HomePage() {
           {journalMessage ? (
             <p style={{ marginTop: 16, fontSize: 22 }}>{journalMessage}</p>
           ) : null}
+
+          <div style={{ marginTop: 32 }}>
+            <h3 style={{ fontSize: 28 }}>Мои записи</h3>
+
+            {journalLoading ? (
+              <p style={{ fontSize: 20 }}>Загрузка записей...</p>
+            ) : journalEntries.length === 0 ? (
+              <p style={{ fontSize: 20 }}>Записей пока нет.</p>
+            ) : (
+              <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
+                {journalEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    style={{
+                      padding: 20,
+                      borderRadius: 16,
+                      background: "#f3f3f3",
+                    }}
+                  >
+                    <p style={{ fontSize: 16, opacity: 0.7 }}>
+                      {new Date(entry.created_at).toLocaleString()}
+                    </p>
+                    <p style={{ fontSize: 20, marginTop: 12 }}>
+                      <strong>Чувствую:</strong> {entry.feeling || "—"}
+                    </p>
+                    <p style={{ fontSize: 20, marginTop: 8 }}>
+                      <strong>Произошло:</strong> {entry.happened || "—"}
+                    </p>
+                    <p style={{ fontSize: 20, marginTop: 8 }}>
+                      <strong>Следующий шаг:</strong> {entry.next_step || "—"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <button onClick={() => setScreenMode("home")} style={{ ...buttonStyle, marginTop: 20 }}>
             Назад
