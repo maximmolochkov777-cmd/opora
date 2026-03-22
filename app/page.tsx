@@ -183,13 +183,30 @@ export default function HomePage() {
     setTalkReply(getSupportReply(talkText));
   }
 
-  function saveJournal() {
+  async function saveJournal() {
+    if (!user?.id) {
+      setJournalMessage("Сначала нужно войти.");
+      return;
+    }
+
     if (!feeling.trim() && !happened.trim() && !nextStep.trim()) {
       setJournalMessage("Заполни хотя бы одно поле.");
       return;
     }
 
-    setJournalMessage("Запись сохранена.");
+    const { error } = await supabase.from("journal_entries").insert({
+      user_id: user.id,
+      feeling,
+      happened,
+      next_step: nextStep,
+    });
+
+    if (error) {
+      setJournalMessage("Ошибка сохранения: " + error.message);
+      return;
+    }
+
+    setJournalMessage("Запись сохранена в базу.");
     setFeeling("");
     setHappened("");
     setNextStep("");
