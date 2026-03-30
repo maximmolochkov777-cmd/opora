@@ -264,7 +264,58 @@ export default function HomePage() {
   }
 
   function sendChatMessage() {
-    if (!chatInput.trim()) return;
+    async function sendChatMessage() {
+  if (!chatInput.trim()) return;
+
+  const userMessage = {
+    role: "user" as const,
+    content: chatInput,
+  };
+
+  setChatMessages((prev) => [...prev, userMessage]);
+
+  const currentInput = chatInput;
+  setChatInput("");
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: currentInput }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Ошибка AI: " + (data.error || "не удалось получить ответ"),
+        },
+      ]);
+      return;
+    }
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: data.reply || "Ответ не получен",
+      },
+    ]);
+  } catch (error) {
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: "Ошибка сети или сервера.",
+      },
+    ]);
+  }
+}
 
     const userMessage: ChatMessage = {
       role: "user",
