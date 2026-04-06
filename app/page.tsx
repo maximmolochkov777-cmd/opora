@@ -263,14 +263,58 @@ export default function HomePage() {
     setTalkReply(getSupportReply(talkText));
   }
 
- async function sendChatMessage() {
+async function sendChatMessage() {
   if (!chatInput.trim()) return;
 
-  const userMessage = {
-    role: "user" as const,
-    content: chatInput,
+  const currentInput = chatInput;
+
+  const userMessage: ChatMessage = {
+    role: "user",
+    content: currentInput,
   };
 
+  setChatMessages((prev) => [...prev, userMessage]);
+  setChatInput("");
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: currentInput }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Ошибка AI: " + (data.error || "не удалось получить ответ"),
+        },
+      ]);
+      return;
+    }
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: data.reply || "Ответ не получен",
+      },
+    ]);
+  } catch {
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: "Ошибка сети или сервера.",
+      },
+    ]);
+  }
+}
   setChatMessages((prev) => [...prev, userMessage]);
 
   const currentInput = chatInput;
