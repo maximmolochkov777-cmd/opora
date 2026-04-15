@@ -89,32 +89,6 @@ function getSupportReply(text: string) {
   return "Спасибо, что написал. Я тебя услышал. То, что с тобой происходит, имеет значение. Сейчас не нужно быть идеальным — достаточно честно назвать, что тебе тяжело.";
 }
 
-function getChatReply(text: string) {
-  const value = text.trim().toLowerCase();
-
-  if (!value) {
-    return "Можешь написать коротко и как есть. Я рядом.";
-  }
-
-  if (value.includes("трев") || value.includes("паник") || value.includes("страх")) {
-    return "Похоже, тебе сейчас тревожно. Давай не будем решать всё сразу. Что тревожит сильнее всего именно сейчас?";
-  }
-
-  if (value.includes("устал") || value.includes("нет сил") || value.includes("выгор")) {
-    return "Слышу, что у тебя мало сил. Сейчас важнее не ругать себя, а понять, где уходит ресурс. Что сильнее всего тебя истощает?";
-  }
-
-  if (value.includes("работ") || value.includes("деньг")) {
-    return "Тема работы и денег сильно давит на психику. Давай разделим: что срочно, а что пока просто висит фоном и давит?";
-  }
-
-  if (value.includes("один") || value.includes("одиноч")) {
-    return "Одиночество переживается очень тяжело. Спасибо, что написал об этом. Что тебе сейчас нужнее: чтобы тебя выслушали или чтобы помогли разложить всё по шагам?";
-  }
-
-  return "Я тебя услышал. Давай спокойно разберем это вместе. Что в этой ситуации для тебя самое тяжелое?";
-}
-
 export default function HomePage() {
   const [user, setUser] = useState<UserState>(null);
   const [email, setEmail] = useState("");
@@ -263,164 +237,57 @@ export default function HomePage() {
     setTalkReply(getSupportReply(talkText));
   }
 
-async function sendChatMessage() {
-  if (!chatInput.trim()) return;
+  async function sendChatMessage() {
+    if (!chatInput.trim()) return;
 
-  const currentInput = chatInput;
-
-  const userMessage: ChatMessage = {
-    role: "user",
-    content: currentInput,
-  };
-
-  setChatMessages((prev) => [...prev, userMessage]);
-  setChatInput("");
-
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message: currentInput }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Ошибка AI: " + (data.error || "не удалось получить ответ"),
-        },
-      ]);
-      return;
-    }
-
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: data.reply || "Ответ не получен",
-      },
-    ]);
- } catch (error) {
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "Ошибка сети или сервера.",
-      },
-    ]);
-  }
-}
-  setChatMessages((prev) => [...prev, userMessage]);
-
-  const currentInput = chatInput;
-  setChatInput("");
-
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message: currentInput }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Ошибка AI: " + (data.error || "не удалось получить ответ"),
-        },
-      ]);
-      return;
-    }
-
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: data.reply || "Ответ не получен",
-      },
-    ]);
-  } catch (error) {
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "Ошибка сети или сервера.",
-      },
-    ]);
-  }
-}
-  const userMessage = {
-    role: "user" as const,
-    content: chatInput,
-  };
-
-  setChatMessages((prev) => [...prev, userMessage]);
-
-  const currentInput = chatInput;
-  setChatInput("");
-
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message: currentInput }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Ошибка AI: " + (data.error || "не удалось получить ответ"),
-        },
-      ]);
-      return;
-    }
-
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: data.reply || "Ответ не получен",
-      },
-    ]);
-  } catch (error) {
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "Ошибка сети или сервера.",
-      },
-    ]);
-  }
-}
+    const currentInput = chatInput;
 
     const userMessage: ChatMessage = {
       role: "user",
-      content: chatInput,
+      content: currentInput,
     };
 
-    const assistantMessage: ChatMessage = {
-      role: "assistant",
-      content: getChatReply(chatInput),
-    };
-
-    setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setChatMessages((prev) => [...prev, userMessage]);
     setChatInput("");
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: currentInput }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Ошибка AI: " + (data.error || "не удалось получить ответ"),
+          },
+        ]);
+        return;
+      }
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: data.reply || "Ответ не получен",
+        },
+      ]);
+    } catch (error) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Ошибка сети или сервера.",
+        },
+      ]);
+    }
   }
 
   async function saveJournal() {
