@@ -32,11 +32,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       reply: response.output_text,
     });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "AI request failed" },
-      { status: 500 }
-    );
-  }
+ } catch (error: any) {
+  console.error(error);
+  return NextResponse.json(
+    { error: error?.message || "AI request failed" },
+    { status: 500 }
+  );
+}
 }
