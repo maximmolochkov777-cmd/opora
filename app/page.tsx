@@ -305,7 +305,7 @@ async function sendChatMessage() {
         content: data.reply || "Ответ не получен",
       },
     ]);
-  } catch (error) { 
+ } catch (error) {
     setChatMessages((prev) => [
       ...prev,
       {
